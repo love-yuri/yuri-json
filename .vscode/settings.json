@@ -1,0 +1,102 @@
+{
+  "files.autoSave": "afterDelay", //设置自动保存
+  "files.defaultLanguage": "c++", // ctrl+N新建文件后默认的语言
+  "editor.formatOnSave": true, //设置保存时格式化代码
+  "editor.formatOnPaste": false, // 粘贴时格式化代码
+  "editor.formatOnType": true, // 输入分号(C/C++的语句结束标识)后自动格式化当前这一行的代码
+  "editor.suggest.snippetsPreventQuickSuggestions": false, // clangd的snippets有很多的跳转点，不用这个就必须手动触发Intellisense了
+  "editor.acceptSuggestionOnEnter": "off", // 我个人的习惯，按回车时一定是真正的换行，只有tab才会接受Intellisense
+  "editor.snippetSuggestions": "top", // （可选）snippets显示在补全列表顶端，默认是inline
+  "code-runner.runInTerminal": true, // 设置成false会在“输出”中输出，无法输入
+  "code-runner.executorMap": {
+    // "c": "cd $dir && gcc '$fileName' -o '$fileNameWithoutExt.exe' -Wall -g -O2 -static-libgcc -std=c11 -fexec-charset=GBK && &'$dir$fileNameWithoutExt'",
+    // "cpp": "cd $dir && g++ '$fileName' -o '$fileNameWithoutExt.exe' -Wall -g -O2 -static-libgcc -std=c++17 -fexec-charset=GBK && &'$dir$fileNameWithoutExt'"
+    "c": "cd $dir && clang $fileName -o $fileNameWithoutExt.out -Wall -g   -std=c17  && $dir$fileNameWithoutExt.out",
+    "cpp": "cd $dir && clang++ $fileName -o $fileNameWithoutExt.out -Wall -g   -std=c++23  && $dir$fileNameWithoutExt.out",
+    "csharp": "cd $dir && dotnet run"
+  }, // 右键run code时运行的命令；未注释的仅适用于PowerShell（Win10默认），文件名中有空格也可以编译运行；注释掉的适用于cmd（win7默认），PS和bash也能用，但文件名中有空格时无法运行
+  "code-runner.saveFileBeforeRun": true, // run code前保存
+  "code-runner.preserveFocus": true, // 若为false，run code后光标会聚焦到终端上。如果需要频繁输入数据可设为false
+  "code-runner.clearPreviousOutput": true, // 每次run code前清空属于code runner的终端消息，默认false
+  "code-runner.ignoreSelection": true, // 默认为false，效果是鼠标选中一块代码后可以单独执行，但C是编译型语言，不适合这样用
+  "C_Cpp.errorSquiggles": "enabled",
+  //设置光标丝滑显示
+  "editor.cursorSmoothCaretAnimation": "on",
+  "editor.cursorBlinking": "expand", // 光标闪烁效果（expand/phase/solid等）
+  "editor.cursorStyle": "line", // 光标样式（line/block/underline）
+  "editor.cursorWidth": 2, // 光标宽度（像素）
+  "editor.tabSize": 2, // tap宽度
+  "workbench.list.smoothScrolling": true,
+  "editor.smoothScrolling": true,
+  "terminal.integrated.smoothScrolling": true,
+  //设置插件自动补全括号
+  "C_Cpp.autocompleteAddParentheses": true,
+  //设置彩虹括号成对显示
+  "editor.guides.bracketPairs": true,
+  "editor.bracketPairColorization.independentColorPoolPerBracketType": false,
+  //设置禁用c/c++ 代码提示和自动补全功能
+  "C_Cpp.intelliSenseEngineFallback": "disabled",
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "C_Cpp.autocomplete": "disabled",
+  "clangd.modules.enabled": true,
+  "clangd.modules.fallbackBuildDirectory": "build",
+  "editor.fontFamily": "Maple Mono NF CN Medium" , // 编辑器字体
+  "editor.codeLensFontFamily": "Maple Mono NF CN Medium",
+  // "editor.fontFamily": "Consolas", // 编辑器字体 windows
+  // "editor.codeLensFontFamily": "Consolas",
+  "terminal.integrated.fontFamily": "Maple Mono NF CN Medium", // 终端字体
+  // "terminal.integrated.fontFamily": "JetBrainsMonoNL Nerd Font Mono", // 终端字体
+   "workbench.fontAliasing": "antialiased",  // 抗锯齿模式
+  "window.titleBarStyle": "custom",         // 确保标题栏字体生效
+  "editor.fontSize": 22, // 编辑器文字大小
+  "terminal.integrated.fontSize": 23, // 集成终端字体大小
+  "editor.semanticHighlighting.enabled": true,
+  "editor.fontLigatures": true,
+  "editor.fontVariations": false,
+  "C_Cpp.default.cppStandard": "c++23",
+  "C_Cpp.default.cStandard": "c17",
+  "commentTranslate.source": "Google",
+  "sqltools.connections": [], // 默认翻译设置
+  "terminal.integrated.cursorStyle": "underline", // 设置终端下弧线类型
+  "C_Cpp.default.intelliSenseMode": "clang-x64",
+  "liveServer.settings.port": 5501,
+  // 头部注释
+  "fileheader.customMade": {
+    "Author": "git config user.name && git config user.email", // 同时获取用户名与邮箱
+    "Date": "Do not edit", // 文件创建时间(不变)
+    "LastEditTime": "Do not edit", // 文件最后编辑时间
+    "Description": "" // 介绍文件的作用、文件的入参、出参。,
+  },
+  // 函数注释
+  "fileheader.cursorMode": {
+    "description": "", // 函数注释生成之后，光标移动到这里
+    "param": "", // param 开启函数参数自动提取 需要将光标放在函数行或者函数上方的空白行
+    "return": ""
+  },
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
+  // "leetcode.workspaceFolder": "/home/yuri/yuri2078/leetcode",
+  "Codegeex.Comment.LanguagePreference": "中文",
+  "Codegeex.Chat.LanguagePreference": "中文",
+  "Codegeex.CompletionModel": "CodeGeeX Pro[Beta]",
+  "Codegeex.GenerationPreference": "line by line",
+  "Codegeex.CommitMessageStyle": "ConventionalCommits",
+  "Codegeex.SidebarUI.LanguagePreference": "中文",
+  "files.eol": "\n",
+  "clangd.compileCommands": "${workspaceFolder}/build/compile_commands.json",
+  "cmake.sourceDirectory": "${workspaceFolder}/CMakeLists.txt",
+  "cmake.ignoreCMakeListsMissing": true,
+  "cSpell.words": ["yinfo", "yerror"],
+  "Lua.type.inferTableSize": 2,
+  "Lua.runtime.version": "LuaJIT",
+  "Lua.diagnostics.globals": ["vim"],
+  "Lua.workspace.library": [
+    "/nix/store/99mraj58037wa3wwhv47iqafy922zqhi-neovim-unwrapped-0.11.2/share/nvim/runtime/lua",
+    "/nix/store/99mraj58037wa3wwhv47iqafy922zqhi-neovim-unwrapped-0.11.2/share/nvim/runtime/lua/vim/lsp"
+  ],
+  "Lua.workspace.checkThirdParty": false,
+  "files.exclude": {
+    ".cache": true,
+  }
+}

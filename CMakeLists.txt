@@ -1,0 +1,31 @@
+cmake_minimum_required(VERSION 3.30)
+cmake_policy(SET CMP0149 NEW)
+set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "d0edc3af-4c50-42ea-a356-e2862fe7a444")
+project(yuri_json LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_MODULE_STD 1)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -freflection")
+
+# ---- 主库 ----
+add_library(yuri_json STATIC)
+target_sources(yuri_json PUBLIC FILE_SET CXX_MODULES FILES
+  src/json.cppm
+  src/simd.cppm
+  src/string_utils.cppm
+  src/output.cppm
+  src/parser.cppm
+  src/reflection.cppm
+)
+
+add_executable(json_demo main.cpp)
+target_link_libraries(json_demo PRIVATE yuri_json)
+
+# ---- 测试 ----
+option(BUILD_TESTING "构建benchmark测试" OFF)
+if(BUILD_TESTING)
+  enable_testing()
+  add_subdirectory(test)
+endif()

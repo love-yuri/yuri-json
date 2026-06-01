@@ -1,0 +1,6 @@
+.vs/
+bin/
+obj/
+build/
+*-build-*/
+.cache/
