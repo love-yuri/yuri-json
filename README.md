@@ -139,7 +139,7 @@ bash script/benchmark.sh
   │     库    │ SmallObj序列 │ SmallObj反序列 │ MediumObj序列 │ MediumObj反序列 │ ComplexObj序列 │ ComplexObj反序列 │
   │           │      化      │       化       │      化       │       化        │       化       │        化        │
   ├───────────┼──────────────┼────────────────┼───────────────┼─────────────────┼────────────────┼──────────────────┤
-  │ reflect   │ 0.092 us     │ 0.125 us       │ 0.190 us      │ 0.398 us        │ 0.248 us       │ 0.540 us         │
+  │ yuri-json │ 0.092 us     │ 0.125 us       │ 0.190 us      │ 0.398 us        │ 0.248 us       │ 0.540 us         │
   ├───────────┼──────────────┼────────────────┼───────────────┼─────────────────┼────────────────┼──────────────────┤
   │ glaze     │ 0.068 us     │ 0.028 us       │ 0.187 us      │ 0.180 us        │ 0.465 us       │ 0.303 us         │
   ├───────────┼──────────────┼────────────────┼───────────────┼─────────────────┼────────────────┼──────────────────┤
@@ -172,7 +172,7 @@ cd build && ctest --output-on-failure
 └── test/
     ├── CMakeLists.txt       # 测试构建配置
     ├── bench_common.hpp     # 共享测试数据结构
-    ├── bench_reflect.cpp    # 本库 benchmark
+    ├── bench_yuri-json.cpp    # 本库 benchmark
     ├── bench_nlohmann.cpp   # nlohmann/json benchmark
     ├── bench_glaze.cpp      # glaze benchmark
     ├── bench_rapidjson.cpp  # rapidjson benchmark
