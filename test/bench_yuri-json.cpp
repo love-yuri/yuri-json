@@ -33,6 +33,16 @@ struct ComplexObj {
   std::vector<double> metrics;      // 指标列表
 };
 
+/** @brief 大型结构体，KB级JSON */
+struct LargeObj {
+  std::string title;                      // 标题
+  int version;                            // 版本
+  bool debug;                             // 调试模式
+  std::vector<std::string> tags;          // 标签
+  std::vector<int> indices;               // 索引
+  std::vector<double> values;             // 值
+};
+
 // ============================================================================
 // JSON字符串生成函数
 // ============================================================================
@@ -89,6 +99,52 @@ ComplexObj makeComplexObj() {
   };
 }
 
+/** @brief 生成LargeObj的JSON字符串（约15KB） */
+std::string makeLargeJson() {
+  std::string json;
+  json.reserve(16384);
+  json += R"({"title":"Large Benchmark Dataset","version":42,"debug":false,)";
+  json += R"("tags":[)";
+  for (int i = 0; i < 100; ++i) {
+    if (i > 0) json += ',';
+    json += '"';
+    json += "tag_" + std::to_string(i);
+    json += '"';
+  }
+  json += "],";
+  json += R"("indices":[)";
+  for (int i = 0; i < 500; ++i) {
+    if (i > 0) json += ',';
+    json += std::to_string(i * 7 + 3);
+  }
+  json += "],";
+  json += R"("values":[)";
+  for (int i = 0; i < 500; ++i) {
+    if (i > 0) json += ',';
+    json += std::to_string(i * 0.123 + 1.0);
+  }
+  json += "]}";
+  return json;
+}
+
+/** @brief 创建LargeObj测试对象 */
+LargeObj makeLargeObj() {
+  LargeObj obj;
+  obj.title = "Large Benchmark Dataset";
+  obj.version = 42;
+  obj.debug = false;
+  obj.tags.reserve(100);
+  for (int i = 0; i < 100; ++i)
+    obj.tags.push_back("tag_" + std::to_string(i));
+  obj.indices.reserve(500);
+  for (int i = 0; i < 500; ++i)
+    obj.indices.push_back(i * 7 + 3);
+  obj.values.reserve(500);
+  for (int i = 0; i < 500; ++i)
+    obj.values.push_back(i * 0.123 + 1.0);
+  return obj;
+}
+
 // ============================================================================
 // Benchmark计时工具
 // ============================================================================
@@ -136,7 +192,7 @@ double runDeserializeBench(Func fn) {
 
 /** @brief json反射库benchmark主函数 */
 int main() {
-  std::println("=== C++26 Reflect JSON Benchmark ===\n");
+  std::println("=== C++26 yuri-json JSON Benchmark ===\n");
 
   // SmallObj
   {
@@ -163,6 +219,15 @@ int main() {
     auto ser = runSerializeBench([&] { return yuri::to_json(obj); });
     auto deser = runDeserializeBench([&] { return yuri::from_json<ComplexObj>(json_str); });
     std::println("{:<25} {:>9.3f} us {:>9.3f} us", "ComplexObj", ser, deser);
+  }
+
+  // LargeObj（约15KB JSON）
+  {
+    auto obj = makeLargeObj();
+    auto json_str = makeLargeJson();
+    auto ser = runSerializeBench([&] { return yuri::to_json(obj); });
+    auto deser = runDeserializeBench([&] { return yuri::from_json<LargeObj>(json_str); });
+    std::println("{:<25} {:>9.3f} us {:>9.3f} us", "LargeObj(~15KB)", ser, deser);
   }
 
   return 0;

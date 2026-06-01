@@ -75,6 +75,27 @@ int main() {
     results.push_back({ "ComplexObj", -1.0, deser });
   }
 
+  // LargeObj
+  {
+    auto json_str = makeLargeJson();
+    auto deser = runDeserializeBench("Large", [&] {
+      simdjson::padded_string padded(json_str);
+      auto doc = parser.iterate(padded);
+      LargeObj o;
+      o.title = std::string(doc["title"].get_string().value());
+      o.version = static_cast<int>(doc["version"].get_int64().value());
+      o.debug = doc["debug"].get_bool().value();
+      for (auto tag : doc["tags"].get_array())
+        o.tags.push_back(std::string(tag.get_string().value()));
+      for (auto idx : doc["indices"].get_array())
+        o.indices.push_back(static_cast<int>(idx.get_int64().value()));
+      for (auto val : doc["values"].get_array())
+        o.values.push_back(val.get_double().value());
+      return o;
+    });
+    results.push_back({ "LargeObj(~15KB)", -1.0, deser });
+  }
+
   // 手动输出（simdjson无序列化）
   std::println("=== simdjson ===");
   std::println("{:<25} {:>12} {:>12}", "Benchmark", "Serialize", "Deserialize");

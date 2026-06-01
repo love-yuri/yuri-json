@@ -5,10 +5,10 @@ find_package(simdjson REQUIRED)
 find_path(RAPIDJSON_INCLUDE_DIR rapidjson/document.h REQUIRED)
 
 # ---- json反射benchmark ----
-add_executable(bench_reflect bench_reflect.cpp)
-target_link_libraries(bench_reflect PRIVATE yuri_json)
-target_include_directories(bench_reflect PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-add_test(NAME bench_reflect COMMAND bench_reflect)
+add_executable(bench_yuri-json bench_yuri-json.cpp)
+target_link_libraries(bench_yuri-json PRIVATE yuri_json)
+target_include_directories(bench_yuri-json PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+add_test(NAME bench_yuri-json COMMAND bench_yuri-json)
 
 # ---- nlohmann benchmark ----
 add_executable(bench_nlohmann bench_nlohmann.cpp)

@@ -141,6 +141,56 @@ int main() {
     results.push_back({ "ComplexObj", ser, deser });
   }
 
+  // LargeObj
+  {
+    auto obj = makeLargeObj();
+    auto json_str = makeLargeJson();
+    auto ser = runSerializeBench("Large", [&] {
+      rapidjson::StringBuffer buffer;
+      rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+      writer.StartObject();
+      writer.Key("title");
+      writer.String(obj.title.c_str(), static_cast<rapidjson::SizeType>(obj.title.size()));
+      writer.Key("version");
+      writer.Int(obj.version);
+      writer.Key("debug");
+      writer.Bool(obj.debug);
+      writer.Key("tags");
+      writer.StartArray();
+      for (const auto &tag : obj.tags)
+        writer.String(tag.c_str(), static_cast<rapidjson::SizeType>(tag.size()));
+      writer.EndArray();
+      writer.Key("indices");
+      writer.StartArray();
+      for (auto v : obj.indices)
+        writer.Int(v);
+      writer.EndArray();
+      writer.Key("values");
+      writer.StartArray();
+      for (auto v : obj.values)
+        writer.Double(v);
+      writer.EndArray();
+      writer.EndObject();
+      return std::string(buffer.GetString());
+    });
+    auto deser = runDeserializeBench("Large", [&] {
+      rapidjson::Document doc;
+      doc.Parse(json_str.c_str());
+      LargeObj o;
+      o.title = doc["title"].GetString();
+      o.version = doc["version"].GetInt();
+      o.debug = doc["debug"].GetBool();
+      for (auto &v : doc["tags"].GetArray())
+        o.tags.push_back(v.GetString());
+      for (auto &v : doc["indices"].GetArray())
+        o.indices.push_back(v.GetInt());
+      for (auto &v : doc["values"].GetArray())
+        o.values.push_back(v.GetDouble());
+      return o;
+    });
+    results.push_back({ "LargeObj(~15KB)", ser, deser });
+  }
+
   printResult("rapidjson", results);
   return 0;
 }

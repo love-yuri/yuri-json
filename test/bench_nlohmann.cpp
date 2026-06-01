@@ -93,6 +93,34 @@ int main() {
     results.push_back({ "ComplexObj", ser, deser });
   }
 
+  // LargeObj
+  {
+    auto obj = makeLargeObj();
+    auto json_str = makeLargeJson();
+    auto ser = runSerializeBench("Large", [&] {
+      nlohmann::json j;
+      j["title"] = obj.title;
+      j["version"] = obj.version;
+      j["debug"] = obj.debug;
+      j["tags"] = obj.tags;
+      j["indices"] = obj.indices;
+      j["values"] = obj.values;
+      return j.dump();
+    });
+    auto deser = runDeserializeBench("Large", [&] {
+      auto j = nlohmann::json::parse(json_str);
+      LargeObj o;
+      o.title = j["title"].get<std::string>();
+      o.version = j["version"].get<int>();
+      o.debug = j["debug"].get<bool>();
+      o.tags = j["tags"].get<std::vector<std::string>>();
+      o.indices = j["indices"].get<std::vector<int>>();
+      o.values = j["values"].get<std::vector<double>>();
+      return o;
+    });
+    results.push_back({ "LargeObj(~15KB)", ser, deser });
+  }
+
   printResult("nlohmann", results);
   return 0;
 }

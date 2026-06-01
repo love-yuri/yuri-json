@@ -28,7 +28,7 @@ std::string joinStrings(const std::vector<std::string> &vec) {
 }
 
 int main() {
-  std::println("=== C++26 Reflect JSON (SIMD) ===\n");
+  std::println("=== C++26 yuri-json JSON (SIMD) ===\n");
 
   // 测试1：Person序列化
   Person p{ "Alice", 30, 1.65, false, { "reading", "coding", "gaming" } };

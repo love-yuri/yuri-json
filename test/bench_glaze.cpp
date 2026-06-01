@@ -56,6 +56,25 @@ struct glz::meta<ComplexObj> {
   );
 };
 
+template <>
+struct glz::meta<LargeObj> {
+  using T = LargeObj;
+  static constexpr auto value = glz::object(
+    "title",
+    &T::title,
+    "version",
+    &T::version,
+    "debug",
+    &T::debug,
+    "tags",
+    &T::tags,
+    "indices",
+    &T::indices,
+    "values",
+    &T::values
+  );
+};
+
 /** @brief glaze benchmark主函数 */
 int main() {
   std::println("=== glaze Benchmark ===\n");
@@ -99,6 +118,19 @@ int main() {
       return o;
     });
     results.push_back({ "ComplexObj", ser, deser });
+  }
+
+  // LargeObj
+  {
+    auto obj = makeLargeObj();
+    auto json_str = makeLargeJson();
+    auto ser = runSerializeBench("Large", [&] { return glz::write_json(obj).value(); });
+    auto deser = runDeserializeBench("Large", [&] {
+      LargeObj o{};
+      glz::read_json(o, json_str);
+      return o;
+    });
+    results.push_back({ "LargeObj(~15KB)", ser, deser });
   }
 
   printResult("glaze", results);
