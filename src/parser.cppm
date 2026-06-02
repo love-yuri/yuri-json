@@ -7,7 +7,7 @@ import :string_utils;
 import :output;
 
 // ============================================================================
-// JSON 解析器
+// JSON 解析器（极致优化版 v2）
 // ============================================================================
 
 export namespace yuri::json_detail {
@@ -21,16 +21,63 @@ struct JsonParser {
   explicit JsonParser(std::string_view sv) : p_(sv.data()), end_(sv.data() + sv.size()) {
   }
 
+  const char *mark() const {
+    return p_;
+  }
+
+  void rewind(const char *p) {
+    p_ = p;
+  }
+
+  bool nextIsWs() const {
+    return p_ < end_ && (*p_ == ' ' || *p_ == '\t' || *p_ == '\n' || *p_ == '\r');
+  }
+
   /** @brief 跳过空白 */
   void skipWs() {
     json_detail::skipWs(p_, end_);
   }
 
-  /** @brief 匹配并消耗一个字符 */
+  /** @brief 匹配并消耗一个字符（跳过前导空白） */
   bool match(char c) {
     skipWs();
-    if (p_ < end_ && *p_ == c) {
+    if (__builtin_expect(p_ < end_ && *p_ == c, true)) {
       ++p_;
+      return true;
+    }
+    return false;
+  }
+
+  /** @brief 匹配字符（不跳过空白，用于已知无空白的场景） */
+  bool matchNoWs(char c) {
+    if (__builtin_expect(p_ < end_ && *p_ == c, true)) {
+      ++p_;
+      return true;
+    }
+    return false;
+  }
+
+  bool matchNoWsOrWs(char c) {
+    if (__builtin_expect(p_ < end_ && *p_ == c, true)) {
+      ++p_;
+      return true;
+    }
+    if (__builtin_expect(nextIsWs(), false)) {
+      return match(c);
+    }
+    return false;
+  }
+
+  bool matchKeyNoWs(std::string_view key) {
+    auto len = key.size();
+    if (
+      __builtin_expect(
+        p_ + len + 2 <= end_ && p_[0] == '"' && p_[len + 1] == '"'
+          && std::memcmp(p_ + 1, key.data(), len) == 0,
+        true
+      )
+    ) {
+      p_ += len + 2;
       return true;
     }
     return false;
@@ -38,7 +85,7 @@ struct JsonParser {
 
   /** @brief 处理转义字符，成功返回true */
   bool processEscape(std::string &out) {
-    if (p_ >= end_) {
+    if (__builtin_expect(p_ >= end_, false)) {
       return false;
     }
     char esc = *p_++;
@@ -82,7 +129,7 @@ struct JsonParser {
 
   /** @brief 处理Unicode转义 \uXXXX */
   bool processUnicode(std::string &out) {
-    if (p_ + 4 > end_) {
+    if (__builtin_expect(p_ + 4 > end_, false)) {
       return false;
     }
     unsigned int cp = 0;
@@ -115,12 +162,12 @@ struct JsonParser {
 
   /** @brief 快速解析无转义JSON字符串为string_view并计算FNV-1a哈希 */
   bool parseStringViewHash(std::string_view &out, std::uint32_t &hash) {
-    if (!match('"')) {
+    if (__builtin_expect(!match('"'), false)) {
       return false;
     }
     const char *start = p_;
     hash = 2166136261u;
-    while (p_ < end_) {
+    while (__builtin_expect(p_ < end_, true)) {
       char c = *p_;
       if (c == '"') {
         out = std::string_view(start, p_ - start);
@@ -137,33 +184,18 @@ struct JsonParser {
     return false;
   }
 
-  /** @brief 快速解析无转义JSON字符串为string_view */
-  bool parseStringView(std::string_view &out) {
-    if (!match('"')) {
-      return false;
-    }
-    const char *start = p_;
-    const char *seg_end = scanQuoteBackslash(p_, end_);
-    if (seg_end >= end_ || *seg_end != '"') {
-      return false;
-    }
-    out = std::string_view(start, seg_end - start);
-    p_ = seg_end + 1;
-    return true;
-  }
-
   /** @brief SIMD加速解析JSON字符串，结果写入out */
   bool parseDirectString(std::string &out) {
-    if (!match('"')) {
+    if (__builtin_expect(!match('"'), false)) {
       return false;
     }
     out.clear();
-    while (p_ < end_) {
+    while (__builtin_expect(p_ < end_, true)) {
       const char *seg_end = scanQuoteBackslash(p_, end_);
       if (seg_end > p_) {
         out.append(p_, seg_end - p_);
       }
-      if (seg_end >= end_) {
+      if (__builtin_expect(seg_end >= end_, false)) {
         p_ = end_;
         return false;
       }
@@ -173,34 +205,162 @@ struct JsonParser {
         return true;
       }
       ++p_;
-      if (!processEscape(out)) {
+      if (__builtin_expect(!processEscape(out), false)) {
         return false;
       }
     }
     return false;
   }
 
-  /** @brief 解析数值（from_chars高性能） */
+  /** @brief 解析整数（带前导空白跳过） */
   template <typename T>
+    requires std::is_integral_v<T>
   bool parseDirectNumber(T &out) {
     skipWs();
+    return parseIntNoWs(out);
+  }
+
+  /** @brief 解析整数（无前导空白跳过，用于数组批量解析） */
+  template <typename T>
+    requires std::is_integral_v<T>
+  bool parseIntNoWs(T &out) {
     const char *start = p_;
-    bool is_float = false;
-    if (p_ < end_ && *p_ == '-') {
+    bool neg = false;
+    if (__builtin_expect(p_ < end_ && *p_ == '-', false)) {
+      neg = true;
       ++p_;
+    }
+    if (__builtin_expect(p_ >= end_ || *p_ < '0' || *p_ > '9', false)) {
+      p_ = start;
+      return false;
+    }
+    // 快速路径：小整数（最多10位）
+    if (__builtin_expect(p_ + 10 <= end_, true)) {
+      long long val = 0;
+      const char *q = p_;
+      // 手动展开循环
+      if (*q >= '0' && *q <= '9') {
+        val = val * 10 + (*q++ - '0');
+      }
+      if (*q >= '0' && *q <= '9') {
+        val = val * 10 + (*q++ - '0');
+      }
+      if (*q >= '0' && *q <= '9') {
+        val = val * 10 + (*q++ - '0');
+      }
+      if (*q >= '0' && *q <= '9') {
+        val = val * 10 + (*q++ - '0');
+      }
+      if (*q >= '0' && *q <= '9') {
+        val = val * 10 + (*q++ - '0');
+      }
+      if (*q >= '0' && *q <= '9') {
+        val = val * 10 + (*q++ - '0');
+      }
+      if (*q >= '0' && *q <= '9') {
+        val = val * 10 + (*q++ - '0');
+      }
+      if (*q >= '0' && *q <= '9') {
+        val = val * 10 + (*q++ - '0');
+      }
+      if (*q >= '0' && *q <= '9') {
+        val = val * 10 + (*q++ - '0');
+      }
+      if (*q >= '0' && *q <= '9') {
+        val = val * 10 + (*q++ - '0');
+      }
+      if (q < end_ && *q >= '0' && *q <= '9') {
+        while (p_ < end_ && *p_ >= '0' && *p_ <= '9') {
+          ++p_;
+        }
+        std::string_view num_str(start + (neg ? 1 : 0), p_ - start - (neg ? 1 : 0));
+        auto [ptr, ec] = std::from_chars(num_str.data(), num_str.data() + num_str.size(), out);
+        if (ec != std::errc{}) {
+          return false;
+        }
+        if (neg) {
+          out = -out;
+        }
+        return true;
+      }
+      p_ = q;
+      out = static_cast<T>(neg ? -val : val);
+      return true;
     }
     while (p_ < end_ && *p_ >= '0' && *p_ <= '9') {
       ++p_;
     }
-    if (p_ < end_ && *p_ == '.') {
-      is_float = true;
+    std::string_view num_str(start + (neg ? 1 : 0), p_ - start - (neg ? 1 : 0));
+    auto [ptr, ec] = std::from_chars(num_str.data(), num_str.data() + num_str.size(), out);
+    if (ec != std::errc{}) {
+      return false;
+    }
+    if (neg) {
+      out = -out;
+    }
+    return true;
+  }
+
+  /** @brief 解析浮点数（带前导空白跳过） */
+  template <typename T>
+    requires std::is_floating_point_v<T>
+  bool parseDirectNumber(T &out) {
+    skipWs();
+    return parseFloatNoWs(out);
+  }
+
+  /** @brief 解析浮点数（无前导空白跳过，用于数组批量解析） */
+  template <typename T>
+    requires std::is_floating_point_v<T>
+  bool parseFloatNoWs(T &out) {
+    const char *start = p_;
+    bool neg = false;
+    if (__builtin_expect(p_ < end_ && *p_ == '-', false)) {
+      neg = true;
       ++p_;
+    }
+    if (__builtin_expect(p_ >= end_ || *p_ < '0' || *p_ > '9', false)) {
+      p_ = start;
+      return false;
+    }
+    // 快速路径：简单浮点数（无指数）
+    long long int_part = 0;
+    int digit_count = 0;
+    while (p_ < end_ && *p_ >= '0' && *p_ <= '9' && digit_count < 10) {
+      int_part = int_part * 10 + (*p_ - '0');
+      ++p_;
+      ++digit_count;
+    }
+    while (p_ < end_ && *p_ >= '0' && *p_ <= '9') {
+      ++p_;
+    }
+    double val = static_cast<double>(int_part);
+    bool is_simple = true;
+    if (__builtin_expect(p_ < end_ && *p_ == '.', true)) {
+      ++p_;
+      long long frac_part = 0;
+      int frac_digits = 0;
+      while (p_ < end_ && *p_ >= '0' && *p_ <= '9' && frac_digits < 10) {
+        frac_part = frac_part * 10 + (*p_ - '0');
+        ++p_;
+        ++frac_digits;
+      }
       while (p_ < end_ && *p_ >= '0' && *p_ <= '9') {
         ++p_;
       }
+      if (__builtin_expect(frac_digits <= 10, true)) {
+        static constexpr double kPow10[] = { 1.0,        0.1,         0.01,        0.001,
+                                             0.0001,     0.00001,     0.000001,    0.0000001,
+                                             0.00000001, 0.000000001, 0.0000000001 };
+        val += static_cast<double>(frac_part) * kPow10[frac_digits];
+      } else {
+        is_simple = false;
+      }
+    } else {
+      is_simple = (digit_count <= 10);
     }
     if (p_ < end_ && (*p_ == 'e' || *p_ == 'E')) {
-      is_float = true;
+      is_simple = false;
       ++p_;
       if (p_ < end_ && (*p_ == '+' || *p_ == '-')) {
         ++p_;
@@ -209,58 +369,16 @@ struct JsonParser {
         ++p_;
       }
     }
-    if (p_ == start) {
-      return false;
-    }
-    std::string_view num_str(start, p_ - start);
-    if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>) {
-      bool simple_float = true;
-      const char *q = start;
-      bool neg = false;
-      if (*q == '-') {
-        neg = true;
-        ++q;
-      }
-      long long int_part = 0;
-      while (q < p_ && *q >= '0' && *q <= '9') {
-        int_part = int_part * 10 + (*q - '0');
-        ++q;
-      }
-      double val = static_cast<double>(int_part);
-      if (q < p_ && *q == '.') {
-        ++q;
-        double scale = 0.1;
-        while (q < p_ && *q >= '0' && *q <= '9') {
-          val += (*q - '0') * scale;
-          scale *= 0.1;
-          ++q;
-        }
-      }
-      if (q != p_) {
-        simple_float = false;
-      }
-      if (simple_float) {
-        out = static_cast<T>(neg ? -val : val);
-      } else {
-        auto [ptr, ec] = std::from_chars(num_str.data(), num_str.data() + num_str.size(), val);
-        if (ec != std::errc{}) {
-          return false;
-        }
-        out = static_cast<T>(val);
-      }
-    } else {
-      const char *q = start;
-      bool neg = false;
-      if (*q == '-') {
-        neg = true;
-        ++q;
-      }
-      long long val = 0;
-      while (q < p_) {
-        val = val * 10 + (*q - '0');
-        ++q;
-      }
+    if (__builtin_expect(is_simple, true)) {
       out = static_cast<T>(neg ? -val : val);
+    } else {
+      std::string_view num_str(start, p_ - start);
+      double tmp;
+      auto [ptr, ec] = std::from_chars(num_str.data(), num_str.data() + num_str.size(), tmp);
+      if (ec != std::errc{}) {
+        return false;
+      }
+      out = static_cast<T>(tmp);
     }
     return true;
   }
@@ -268,12 +386,12 @@ struct JsonParser {
   /** @brief 解析布尔值 */
   bool parseDirectBool(bool &out) {
     skipWs();
-    if (p_ + 4 <= end_ && std::memcmp(p_, "true", 4) == 0) {
+    if (__builtin_expect(p_ + 4 <= end_ && std::memcmp(p_, "true", 4) == 0, true)) {
       p_ += 4;
       out = true;
       return true;
     }
-    if (p_ + 5 <= end_ && std::memcmp(p_, "false", 5) == 0) {
+    if (__builtin_expect(p_ + 5 <= end_ && std::memcmp(p_, "false", 5) == 0, true)) {
       p_ += 5;
       out = false;
       return true;
@@ -281,10 +399,96 @@ struct JsonParser {
     return false;
   }
 
+  void reserveNumericArray(std::vector<int> &arr) {
+    auto remaining = static_cast<std::size_t>(end_ - p_);
+    if (remaining > 4096) {
+      arr.reserve(512);
+    } else if (remaining > 256) {
+      arr.reserve(64);
+    } else {
+      arr.reserve(8);
+    }
+  }
+
+  void reserveNumericArray(std::vector<double> &arr) {
+    auto remaining = static_cast<std::size_t>(end_ - p_);
+    if (remaining > 4096) {
+      arr.reserve(512);
+    } else if (remaining > 256) {
+      arr.reserve(64);
+    } else {
+      arr.reserve(8);
+    }
+  }
+
+  /** @brief 批量解析整数数组（极致优化版，减少空白跳过） */
+  bool parseIntArray(std::vector<int> &arr) {
+    if (__builtin_expect(!match('['), false)) {
+      return false;
+    }
+    arr.clear();
+    reserveNumericArray(arr);
+    if (__builtin_expect(match(']'), false)) {
+      return true;
+    }
+    while (true) {
+      int elem = 0;
+      if (__builtin_expect(parseIntNoWs(elem), true)) {
+        arr.push_back(elem);
+      } else {
+        return false;
+      }
+      if (__builtin_expect(p_ < end_ && *p_ == ',', true)) {
+        ++p_;
+        if (__builtin_expect(nextIsWs(), false)) {
+          skipWs();
+        }
+        continue;
+      }
+      if (__builtin_expect(nextIsWs(), false)) {
+        skipWs();
+      }
+      break;
+    }
+    return matchNoWs(']');
+  }
+
+  /** @brief 批量解析浮点数组（极致优化版，减少空白跳过） */
+  bool parseDoubleArray(std::vector<double> &arr) {
+    if (__builtin_expect(!match('['), false)) {
+      return false;
+    }
+    arr.clear();
+    reserveNumericArray(arr);
+    if (__builtin_expect(match(']'), false)) {
+      return true;
+    }
+    while (true) {
+      double elem = 0.0;
+      if (__builtin_expect(parseFloatNoWs(elem), true)) {
+        arr.push_back(elem);
+      } else {
+        return false;
+      }
+      if (__builtin_expect(p_ < end_ && *p_ == ',', true)) {
+        ++p_;
+        if (__builtin_expect(nextIsWs(), false)) {
+          skipWs();
+        }
+        continue;
+      }
+      if (__builtin_expect(nextIsWs(), false)) {
+        skipWs();
+      }
+      break;
+    }
+    return matchNoWs(']');
+  }
+
   /** @brief 跳过一个JSON值（类型不匹配时使用） */
   void consumeValue() {
     skipWs();
-    if (p_ >= end_) {
+    if (__builtin_expect(p_ >= end_, false)) {
       return;
     }
     char c = *p_;

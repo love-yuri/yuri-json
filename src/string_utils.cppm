@@ -14,22 +14,27 @@ export namespace yuri::json_detail {
 /** @brief SSE2加速跳过空白字符（16字节并行比较） */
 inline void skipWs(const char *&p, const char *end) __attribute__((always_inline));
 inline void skipWs(const char *&p, const char *end) {
-  M128i v_sp = simdBroadcast(0x20);
-  M128i v_tab = simdBroadcast(0x09);
-  M128i v_lf = simdBroadcast(0x0A);
-  M128i v_cr = simdBroadcast(0x0D);
-  while (p + 16 <= end) {
-    M128i chunk = simdLoad(p);
-    M128i ws = simdOr(
-      simdOr(simdEq(chunk, v_sp), simdEq(chunk, v_tab)),
-      simdOr(simdEq(chunk, v_lf), simdEq(chunk, v_cr))
+  // 快速路径：检查第一个字符是否非空白（最常见情况）
+  if (__builtin_expect(p < end && *p != ' ' && *p != '\t' && *p != '\n' && *p != '\r', true)) {
+    return;
+  }
+  // 慢速路径：使用SIMD跳过连续空白
+  M256i v_sp = simdBroadcast256(0x20);
+  M256i v_tab = simdBroadcast256(0x09);
+  M256i v_lf = simdBroadcast256(0x0A);
+  M256i v_cr = simdBroadcast256(0x0D);
+  while (p + 32 <= end) {
+    M256i chunk = simdLoad256(p);
+    M256i ws = simdOr256(
+      simdOr256(simdEq256(chunk, v_sp), simdEq256(chunk, v_tab)),
+      simdOr256(simdEq256(chunk, v_lf), simdEq256(chunk, v_cr))
     );
-    int mask = simdMovemask(ws);
-    if (mask != 0xFFFF) {
+    auto mask = static_cast<unsigned>(simdMovemask256(ws));
+    if (mask != 0xFFFFFFFFu) {
       p += __builtin_ctz(~mask);
       return;
     }
-    p += 16;
+    p += 32;
   }
   while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) {
     ++p;
@@ -40,16 +45,16 @@ inline void skipWs(const char *&p, const char *end) {
 inline const char *scanQuoteBackslash(const char *p, const char *end)
   __attribute__((always_inline));
 inline const char *scanQuoteBackslash(const char *p, const char *end) {
-  M128i v_quote = simdBroadcast(0x22);
-  M128i v_bslash = simdBroadcast(0x5C);
-  while (p + 16 <= end) {
-    M128i chunk = simdLoad(p);
-    M128i any = simdOr(simdEq(chunk, v_quote), simdEq(chunk, v_bslash));
-    int mask = simdMovemask(any);
+  M256i v_quote = simdBroadcast256(0x22);
+  M256i v_bslash = simdBroadcast256(0x5C);
+  while (p + 32 <= end) {
+    M256i chunk = simdLoad256(p);
+    M256i any = simdOr256(simdEq256(chunk, v_quote), simdEq256(chunk, v_bslash));
+    int mask = simdMovemask256(any);
     if (mask != 0) {
       return p + __builtin_ctz(mask);
     }
-    p += 16;
+    p += 32;
   }
   while (p < end) {
     if (*p == '"' || *p == '\\') {
@@ -63,12 +68,12 @@ inline const char *scanQuoteBackslash(const char *p, const char *end) {
 /** @brief SSE2加速跳过JSON字符串内容（仅跳过，不解析） */
 inline void simdSkipString(const char *&p, const char *end) __attribute__((always_inline));
 inline void simdSkipString(const char *&p, const char *end) {
-  M128i v_quote = simdBroadcast(0x22);
-  M128i v_bslash = simdBroadcast(0x5C);
-  while (p + 16 <= end) {
-    M128i chunk = simdLoad(p);
-    M128i any = simdOr(simdEq(chunk, v_quote), simdEq(chunk, v_bslash));
-    int mask = simdMovemask(any);
+  M256i v_quote = simdBroadcast256(0x22);
+  M256i v_bslash = simdBroadcast256(0x5C);
+  while (p + 32 <= end) {
+    M256i chunk = simdLoad256(p);
+    M256i any = simdOr256(simdEq256(chunk, v_quote), simdEq256(chunk, v_bslash));
+    int mask = simdMovemask256(any);
     if (mask != 0) {
       int pos = __builtin_ctz(mask);
       p += pos;
@@ -79,7 +84,7 @@ inline void simdSkipString(const char *&p, const char *end) {
       ++p;
       return;
     }
-    p += 16;
+    p += 32;
   }
   while (p < end) {
     if (*p == '\\') {
