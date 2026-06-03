@@ -15,8 +15,8 @@ using M128i = char __attribute__((vector_size(16)));
 
 /** @brief 由两个128位向量组成的32字节块 */
 struct M256i {
-  M128i lo;
-  M128i hi;
+  M128i lo; // 低128位
+  M128i hi; // 高128位
 };
 
 /** @brief SSE2广播单字节到16字节向量 */
@@ -57,25 +57,25 @@ inline int simdMovemask(M128i v) {
 inline M256i simdBroadcast256(unsigned char c) __attribute__((always_inline));
 inline M256i simdBroadcast256(unsigned char c) {
   M128i v = simdBroadcast(c);
-  return {v, v};
+  return { v, v };
 }
 
 /** @brief 未对齐加载32字节 */
 inline M256i simdLoad256(const char *p) __attribute__((always_inline));
 inline M256i simdLoad256(const char *p) {
-  return {simdLoad(p), simdLoad(p + 16)};
+  return { simdLoad(p), simdLoad(p + 16) };
 }
 
 /** @brief 32字节相等比较 */
 inline M256i simdEq256(M256i a, M256i b) __attribute__((always_inline));
 inline M256i simdEq256(M256i a, M256i b) {
-  return {simdEq(a.lo, b.lo), simdEq(a.hi, b.hi)};
+  return { simdEq(a.lo, b.lo), simdEq(a.hi, b.hi) };
 }
 
 /** @brief 32字节按位或 */
 inline M256i simdOr256(M256i a, M256i b) __attribute__((always_inline));
 inline M256i simdOr256(M256i a, M256i b) {
-  return {simdOr(a.lo, b.lo), simdOr(a.hi, b.hi)};
+  return { simdOr(a.lo, b.lo), simdOr(a.hi, b.hi) };
 }
 
 /** @brief 提取32字节高位掩码 */
