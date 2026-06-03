@@ -66,8 +66,8 @@ inline const char *scanQuoteBackslash(const char *p, const char *end) {
 }
 
 /** @brief SSE2加速跳过JSON字符串内容（仅跳过，不解析） */
-inline void simdSkipString(const char *&p, const char *end) __attribute__((always_inline));
-inline void simdSkipString(const char *&p, const char *end) {
+inline bool simdSkipString(const char *&p, const char *end) __attribute__((always_inline));
+inline bool simdSkipString(const char *&p, const char *end) {
   M256i v_quote = simdBroadcast256(0x22);
   M256i v_bslash = simdBroadcast256(0x5C);
   while (p + 32 <= end) {
@@ -78,25 +78,32 @@ inline void simdSkipString(const char *&p, const char *end) {
       int pos = __builtin_ctz(mask);
       p += pos;
       if (*p == '\\') {
+        if (p + 1 >= end) {
+          return false;
+        }
         p += 2;
         continue;
       }
       ++p;
-      return;
+      return true;
     }
     p += 32;
   }
   while (p < end) {
     if (*p == '\\') {
+      if (p + 1 >= end) {
+        return false;
+      }
       p += 2;
       continue;
     }
     if (*p == '"') {
       ++p;
-      return;
+      return true;
     }
     ++p;
   }
+  return false;
 }
 
 } // namespace yuri::json_detail

@@ -51,6 +51,32 @@ int main() {
   Person p3 = yuri::from_json<Person>(ext);
   std::println("external: name={}, age={}, hobbies=[{}]", p3.name, p3.age, joinStrings(p3.hobbies));
 
+  constexpr std::string_view kBadJson =
+    R"({"name":"Bob","age":25,"height":1.8,"is_student":true,"hobbies":["music","sports22]})";
+  try {
+    yuri::from_json<Person>(kBadJson);
+  } catch (const std::runtime_error &e) {
+    std::println("invalid json rejected: {}", e.what());
+  }
+  try {
+    yuri::from_json<Person>(kBadJson, yuri::kWithDiagnostics);
+  } catch (const yuri::JsonParseError &e) {
+    std::println("diagnostic json error:\n{}", e.what());
+  }
+
+  constexpr std::string_view multiline_kBadJson = R"({
+    "name":"Bob",
+    "age":"25",
+    "height":1.8,
+    "is_student":true,
+    "hobbies":["music"]
+  })";
+  try {
+    yuri::from_json<Person>(multiline_kBadJson, yuri::kWithDiagnostics);
+  } catch (const yuri::JsonParseError &e) {
+    std::println("multiline diagnostic:\n{}", e.what());
+  }
+
   // 测试4：中文
   Person p4{ "张三", 28, 1.75, false, { "编程", "游戏" } };
   std::string j4 = yuri::to_json(p4);
