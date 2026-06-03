@@ -8,7 +8,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_MODULE_STD 1)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -freflection")
-add_compile_options($<$<CONFIG:Release>:-march=native>)
 
 # ---- 主库 ----
 add_library(yuri_json STATIC)
