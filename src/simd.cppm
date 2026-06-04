@@ -84,4 +84,19 @@ inline int simdMovemask256(M256i v) {
   return simdMovemask(v.lo) | (simdMovemask(v.hi) << 16);
 }
 
+/** @brief SSE2无符号字节小于比较（a < b）：高7位全零且低7位 < b */
+inline M128i simdUnsignedLt(M128i a, M128i b) __attribute__((always_inline));
+inline M128i simdUnsignedLt(M128i a, M128i b) {
+  M128i high_bit = simdBroadcast(0x80);
+  M128i no_high = a & ~high_bit; // 清除符号位，保留低7位
+  // 有符号比较：低7位 < b 且 高位无设置（即 a < 0x80）
+  return __builtin_ia32_pcmpgtb128(b, no_high) & ~__builtin_ia32_pcmpgtb128(a, high_bit);
+}
+
+/** @brief 32字节无符号字节小于比较 */
+inline M256i simdUnsignedLt256(M256i a, M256i b) __attribute__((always_inline));
+inline M256i simdUnsignedLt256(M256i a, M256i b) {
+  return { simdUnsignedLt(a.lo, b.lo), simdUnsignedLt(a.hi, b.hi) };
+}
+
 } // namespace yuri::json_detail

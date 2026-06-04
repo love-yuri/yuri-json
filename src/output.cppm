@@ -227,7 +227,7 @@ inline void writeEscapedString(std::string &out, std::string_view sv) {
   const char *end = p + sv.size();
   const char *seg = p;
   while (p < end) {
-    const char *found = scanQuoteBackslash(p, end);
+    const char *found = scanNeedEscape(p, end);
     if (found > seg) {
       out.append(seg, found - seg);
       seg = found;
@@ -272,7 +272,7 @@ inline void writeEscapedStringBuf(Buffer &buf, std::string_view sv) {
   const char *end = p + sv.size();
   const char *seg = p;
   while (p < end) {
-    const char *found = scanQuoteBackslash(p, end);
+    const char *found = scanNeedEscape(p, end);
     if (found > seg) {
       buf.write(seg, found - seg);
       seg = found;
@@ -330,7 +330,7 @@ inline std::size_t escapedStringSize(std::string_view sv) {
   const char *end = p + sv.size();
   const char *seg = p;
   while (p < end) {
-    const char *found = scanQuoteBackslash(p, end);
+    const char *found = scanNeedEscape(p, end);
     size += static_cast<std::size_t>(found - seg);
     if (found >= end) {
       break;

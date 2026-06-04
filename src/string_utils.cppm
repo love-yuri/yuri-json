@@ -65,6 +65,33 @@ inline const char *scanQuoteBackslash(const char *p, const char *end) {
   return end;
 }
 
+/** @brief SSE2加速扫描需要转义的字符（引号、反斜杠、控制字符<0x20），用于序列化 */
+inline const char *scanNeedEscape(const char *p, const char *end) __attribute__((always_inline));
+inline const char *scanNeedEscape(const char *p, const char *end) {
+  M256i v_quote = simdBroadcast256(0x22);
+  M256i v_bslash = simdBroadcast256(0x5C);
+  M256i v_max_ctrl = simdBroadcast256(0x20);
+  while (p + 32 <= end) {
+    M256i chunk = simdLoad256(p);
+    M256i any = simdOr256(
+      simdOr256(simdEq256(chunk, v_quote), simdEq256(chunk, v_bslash)),
+      simdUnsignedLt256(chunk, v_max_ctrl)
+    );
+    int mask = simdMovemask256(any);
+    if (mask != 0) {
+      return p + __builtin_ctz(mask);
+    }
+    p += 32;
+  }
+  while (p < end) {
+    if (*p == '"' || *p == '\\' || static_cast<unsigned char>(*p) < 0x20) {
+      return p;
+    }
+    ++p;
+  }
+  return end;
+}
+
 /** @brief SSE2加速跳过JSON字符串内容（仅跳过，不解析） */
 inline bool simdSkipString(const char *&p, const char *end) __attribute__((always_inline));
 inline bool simdSkipString(const char *&p, const char *end) {
