@@ -24,8 +24,15 @@ add_executable(json_demo main.cpp)
 target_link_libraries(json_demo PRIVATE yuri_json)
 
 # ---- 测试 ----
-option(BUILD_TESTING "构建benchmark测试" OFF)
+option(BUILD_TESTING "Build unit tests" OFF)
 if(BUILD_TESTING)
   enable_testing()
   add_subdirectory(test)
+endif()
+
+# ---- Benchmark ----
+option(BUILD_BENCHMARK "Build benchmark tests" OFF)
+if(BUILD_BENCHMARK)
+  enable_testing()
+  add_subdirectory(benchmark)
 endif()
