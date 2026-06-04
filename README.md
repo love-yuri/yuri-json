@@ -10,6 +10,18 @@
 - **SIMD 加速**：SSE2 加速字符串扫描、空白跳过和转义检测。
 - **轻量模块**：C++ modules only, `import yuri.json;` 即可使用。
 
+## 快速开始
+
+```bash
+git clone https://github.com/love-yuri/yuri-json && cd yuri-json
+
+# 运行单元测试（108 个用例）
+./script/test.sh
+
+# 运行性能 benchmark（需安装 nlohmann-json/glaze/rapidjson/simdjson）
+./script/benchmark.sh
+```
+
 ## 快速使用
 
 ```cpp
@@ -36,7 +48,7 @@ int main() {
   try {
     Person bad = yuri::from_json<Person>(invalid_json, yuri::kWithDiagnostics);
   } catch (const yuri::JsonParseError &e) {
-    std::println("{}", e.what()); // 彩色错误信息
+    std::println("{}", e.what());
   }
 }
 ```
@@ -49,21 +61,6 @@ int main() {
 - CMake 3.30+
 - Ninja
 - x86-64 平台
-
-## 构建与运行
-
-```bash
-# 构建 demo
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -Wno-dev
-cmake --build build
-./build/json_demo
-
-# 一键运行单元测试（108 个用例）
-bash script/test.sh
-
-# 一键运行性能 benchmark
-bash script/benchmark.sh
-```
 
 ## 测试
 
@@ -89,8 +86,6 @@ bash script/benchmark.sh
 | glaze | 0.059 | 0.027 | 0.171 | 0.173 | 10.501 | 7.087 |
 | rapidjson | 0.107 | 0.113 | 0.251 | 0.403 | 14.684 | 9.805 |
 | nlohmann | 0.298 | 0.532 | 0.823 | 1.419 | 29.675 | 65.173 |
-
-完整 benchmark 运行方式见 [构建与测试](doc/build.md)。
 
 ## 文档
 
