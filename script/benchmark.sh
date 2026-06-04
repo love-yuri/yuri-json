@@ -3,32 +3,39 @@
  # @Author: love-yuri yuri2078170658@gmail.com
  # @Date: 2026-06-01 16:46:23
  # @LastEditTime: 2026-06-01 16:50:36
- # @Description: 
-### 
+ # @Description: 一键运行 yuri-json 性能对比测试（不包含单元测试）
+###
 set -e
 
 cd "$(dirname "$0")/.."
+
+BUILD_DIR="build-bench"
 
 echo "============================================"
 echo "  JSON库性能对比测试"
 echo "============================================"
 
-# 配置 + 构建
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -Wno-dev
-cmake --build build -j$(nproc)
+# 配置 + 构建（仅 benchmark，不含测试）
+cmake -S . -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_BENCHMARK=ON -DBUILD_TESTING=OFF -Wno-dev
+cmake --build "$BUILD_DIR" -j$(nproc)
 
-# ctest
+# ctest 验证 benchmark 可执行文件
 echo ""
 echo "--- CTest ---"
-cd build && ctest --output-on-failure
-cd ..
+ctest --test-dir "$BUILD_DIR" --output-on-failure
 
 # benchmark对比表
 echo ""
 echo "--- Benchmark ---"
 
 LIBS=("yuri-json" "nlohmann" "glaze" "rapidjson" "simdjson")
-BINS=("build/test/bench_yuri-json" "build/test/bench_nlohmann" "build/test/bench_glaze" "build/test/bench_rapidjson" "build/test/bench_simdjson")
+BINS=(
+  "${BUILD_DIR}/benchmark/bench_yuri-json"
+  "${BUILD_DIR}/benchmark/bench_nlohmann"
+  "${BUILD_DIR}/benchmark/bench_glaze"
+  "${BUILD_DIR}/benchmark/bench_rapidjson"
+  "${BUILD_DIR}/benchmark/bench_simdjson"
+)
 declare -A R
 
 for i in "${!LIBS[@]}"; do
