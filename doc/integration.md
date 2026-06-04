@@ -66,6 +66,7 @@ set_target_properties(yuri_json PROPERTIES
   IMPORTED_LOCATION "${YURI_JSON_DIR}/build/libyuri_json.a"
   INTERFACE_INCLUDE_DIRECTORIES "${YURI_JSON_DIR}/src"
 )
+```
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -freflection")
 
