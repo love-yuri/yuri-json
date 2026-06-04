@@ -88,7 +88,7 @@ int main() {
     auto ser = runSerializeBench("Small", [&] { return glz::write_json(obj).value(); });
     auto deser = runDeserializeBench("Small", [&] {
       SmallObj o{};
-      glz::read_json(o, json_str);
+      (void)glz::read_json(o, json_str);
       return o;
     });
     results.push_back({ "SmallObj", ser, deser });
@@ -101,7 +101,7 @@ int main() {
     auto ser = runSerializeBench("Medium", [&] { return glz::write_json(obj).value(); });
     auto deser = runDeserializeBench("Medium", [&] {
       MediumObj o{};
-      glz::read_json(o, json_str);
+      (void)glz::read_json(o, json_str);
       return o;
     });
     results.push_back({ "MediumObj", ser, deser });
@@ -114,7 +114,7 @@ int main() {
     auto ser = runSerializeBench("Complex", [&] { return glz::write_json(obj).value(); });
     auto deser = runDeserializeBench("Complex", [&] {
       ComplexObj o{};
-      glz::read_json(o, json_str);
+      (void)glz::read_json(o, json_str);
       return o;
     });
     results.push_back({ "ComplexObj", ser, deser });
@@ -127,7 +127,7 @@ int main() {
     auto ser = runSerializeBench("Large", [&] { return glz::write_json(obj).value(); });
     auto deser = runDeserializeBench("Large", [&] {
       LargeObj o{};
-      glz::read_json(o, json_str);
+      (void)glz::read_json(o, json_str);
       return o;
     });
     results.push_back({ "LargeObj(~15KB)", ser, deser });
