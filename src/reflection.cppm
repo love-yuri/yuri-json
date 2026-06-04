@@ -7,7 +7,7 @@ import :output;
 import :parser;
 
 // ============================================================================
-// 反射序列化/反序列化（编译期内联）
+// 反射序列化/反序列化
 // ============================================================================
 
 export namespace yuri {
@@ -15,8 +15,6 @@ export namespace yuri {
 struct JsonDiagnostics {
   std::size_t context_chars = 32; // 错误片段上下文字符数
 };
-
-inline constexpr JsonDiagnostics kWithDiagnostics{}; // 默认诊断配置
 
 struct JsonErrorContext {
   std::size_t offset{};       // 错误字节偏移
@@ -443,8 +441,6 @@ bool fillStructDirect(T &obj, JsonParser &parser) {
       return false;
     }
 
-    // 编译期展开：每个字段生成一个 if(hash匹配) { 解析字段; }
-    // 这就是 std::meta 的编译期内联代码
     bool matched = false;
     bool parsed = false;
     template for (constexpr auto m : members) {
@@ -471,6 +467,20 @@ bool fillStructDirect(T &obj, JsonParser &parser) {
   return parser.match('}');
 }
 
+template <typename T>
+JsonParseError makeDiagnosticParseError(std::string_view json_str, JsonDiagnostics diagnostics) {
+  T obj{};
+  JsonErrorRecord record;
+  JsonParser parser(json_str, &record);
+  if (fillStructDirect(obj, parser)) {
+    parser.atEnd();
+  }
+  if (!record.has) {
+    record.record(parser.mark(), "valid JSON");
+  }
+  return buildParseError(json_str, record, diagnostics);
+}
+
 } // namespace yuri::json_detail
 
 // ============================================================================
@@ -478,6 +488,8 @@ bool fillStructDirect(T &obj, JsonParser &parser) {
 // ============================================================================
 
 export namespace yuri {
+
+inline constexpr JsonDiagnostics kWithDiagnostics{}; // 默认诊断配置
 
 template <typename T>
 std::string to_json(const T &value) {
@@ -501,27 +513,13 @@ T from_json(std::string_view json_str) {
 }
 
 template <typename T>
-JsonParseError makeDiagnosticParseError(std::string_view json_str, JsonDiagnostics diagnostics) {
-  T obj{};
-  json_detail::JsonErrorRecord record;
-  json_detail::JsonParser parser(json_str, &record);
-  if (json_detail::fillStructDirect(obj, parser)) {
-    parser.atEnd();
-  }
-  if (!record.has) {
-    record.record(parser.mark(), "valid JSON");
-  }
-  return json_detail::buildParseError(json_str, record, diagnostics);
-}
-
-template <typename T>
 T from_json(std::string_view json_str, JsonDiagnostics diagnostics) {
   T obj{};
   json_detail::JsonParser parser(json_str);
   if (json_detail::fillStructDirect(obj, parser) && parser.atEnd()) {
     return obj;
   }
-  throw makeDiagnosticParseError<T>(json_str, diagnostics);
+  throw json_detail::makeDiagnosticParseError<T>(json_str, diagnostics);
 }
 
 } // namespace yuri

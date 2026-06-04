@@ -1,6 +1,6 @@
 module;
 
-export module yuri.json:parser;
+module yuri.json:parser;
 
 import std;
 import :string_utils;
@@ -10,7 +10,7 @@ import :output;
 // JSON 解析器
 // ============================================================================
 
-export namespace yuri::json_detail {
+namespace yuri::json_detail {
 
 inline constexpr std::string_view expectedToken(char c) {
   switch (c) {

@@ -1,6 +1,6 @@
 module;
 
-export module yuri.json:string_utils;
+module yuri.json:string_utils;
 
 import std;
 import :simd;
@@ -9,7 +9,7 @@ import :simd;
 // SIMD 加速字符串扫描工具
 // ============================================================================
 
-export namespace yuri::json_detail {
+namespace yuri::json_detail {
 
 /** @brief SSE2加速跳过空白字符（16字节并行比较） */
 inline void skipWs(const char *&p, const char *end) __attribute__((always_inline));

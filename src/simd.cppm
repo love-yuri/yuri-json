@@ -1,6 +1,6 @@
 module;
 
-export module yuri.json:simd;
+module yuri.json:simd;
 
 import std;
 
@@ -8,7 +8,7 @@ import std;
 // x64 SSE2 SIMD 基础封装
 // ============================================================================
 
-export namespace yuri::json_detail {
+namespace yuri::json_detail {
 
 /** @brief 128位字节向量类型 */
 using M128i = char __attribute__((vector_size(16)));

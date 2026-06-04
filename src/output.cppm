@@ -2,7 +2,7 @@ module;
 
 #include <cstddef>
 
-export module yuri.json:output;
+module yuri.json:output;
 
 import std;
 import :string_utils;
@@ -11,7 +11,7 @@ import :string_utils;
 // JSON 输出：数值、字符串、数组序列化
 // ============================================================================
 
-export namespace yuri::json_detail {
+namespace yuri::json_detail {
 
 // 预分配的栈缓冲区大小（64KB，足够容纳大部分JSON输出）
 inline constexpr std::size_t kStackBufSize = 65536;
